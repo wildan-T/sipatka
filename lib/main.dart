@@ -4,10 +4,7 @@ import 'package:sipatka/screens/admin/admin_main_screen.dart';
 import 'package:sipatka/screens/auth/login_screen.dart';
 import 'package:sipatka/screens/user/user_main_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-const String supabaseUrl = 'https://jcgqskaxzjbijkisctvo.supabase.co';
-const String supabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjZ3Fza2F4empiaWpraXNjdHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5NDc2OTksImV4cCI6MjA2NTUyMzY5OX0.ekJSQ_5DfQLkSnscWC_WItgSosxY-q5EcogXJqgItT4';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final supabase = Supabase.instance.client;
 
@@ -17,7 +14,13 @@ Future<void> main() async {
   // Inisialisasi locale untuk format tanggal dan mata uang Indonesia
   await initializeDateFormatting('id_ID', null);
 
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  await dotenv.load(fileName: ".env");
+
+  // Inisialisasi Supabase
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
 
   runApp(const SipatkaApp());
 }
