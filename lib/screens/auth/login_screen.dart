@@ -1,15 +1,11 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:sipatka/main.dart';
-import 'package:sipatka/screens/admin/admin_main_screen.dart';
-import 'package:sipatka/screens/auth/forgot_password_screen.dart';
-import 'package:sipatka/screens/user/user_main_screen.dart';
-import 'package:sipatka/utils/helpers.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:sipatka/providers/auth_provider.dart';
+import 'package:sipatka/utils/app_theme.dart';
+// import 'forgot_password_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -21,47 +17,36 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
     
-    try {
-      final response = await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+    setState(() => _isLoading = true);
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
 
-      if (response.user != null && mounted) {
-        final userId = response.user!.id;
-        
-        final roleResponse = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', userId)
-            .maybeSingle();
+    if (!mounted) return;
+    setState(() => _isLoading = false);
 
-        if (roleResponse == null) {
-          if (mounted) {
-            showErrorSnackBar(context, 'Data profil pengguna tidak ditemukan. Silakan hubungi admin.');
-            await supabase.auth.signOut();
-          }
-          setState(() => _isLoading = false);
-          return;
-        }
-        
-        if (!mounted) return;
-        if (roleResponse['role'] == 'admin') {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminMainScreen()));
-        } else {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserMainScreen()));
-        }
+    if (authProvider.errorMessage == null && authProvider.isLoggedIn) {
+      if (authProvider.userRole == 'admin') {
+        Navigator.pushReplacementNamed(context, '/admin_dashboard');
+      } else {
+        Navigator.pushReplacementNamed(context, '/dashboard');
       }
-    } on AuthException catch (e) {
-        if(mounted) showErrorSnackBar(context, e.message);
-    } catch (e) {
-        if(mounted) showErrorSnackBar(context, 'Terjadi kesalahan tidak terduga.');
-    } finally {
-        if(mounted) setState(() => _isLoading = false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? 'Login Gagal. Terjadi kesalahan.'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -69,95 +54,52 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 50),
-                // Menggunakan Icon karena logo.png tidak ada di proyek
-                const Icon(Icons.payment, size: 100, color: Colors.teal),
-                const SizedBox(height: 20),
-                const Text(
-                  'Selamat Datang di SIPATKA',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const Text(
-                  'Masuk untuk melanjutkan',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 40),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Icon(Icons.school, size: 80, color: AppTheme.primaryColor),
+                  const SizedBox(height: 20),
+                  const Text('Selamat Datang di SIPATKA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 40),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder(), prefixIcon: Icon(Icons.email)),
+                    validator: (v) => (v == null || !v.contains('@')) ? 'Email tidak valid' : null,
                   ),
-                  validator:
-                      (val) => val!.isEmpty ? 'Email tidak boleh kosong' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed:
-                          () => setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      )
+                    ),
+                    validator: (v) => (v == null || v.length < 6) ? 'Password minimal 6 karakter' : null,
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      child: _isLoading 
+                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                        : const Text('Masuk'),
                     ),
                   ),
-                  validator:
-                      (val) =>
-                          val!.isEmpty ? 'Password tidak boleh kosong' : null,
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    child:
-                        _isLoading
-                            ? const CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            )
-                            : const Text('Masuk'),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Center(
-                  child: RichText(
-                    text: TextSpan(
-                      text: 'Mengalami masalah? ',
-                      style: const TextStyle(color: Colors.grey, fontFamily: 'Poppins'),
-                      children: [
-                        TextSpan(
-                          text: 'Lupa Password',
-                          style: const TextStyle(
-                            color: Colors.teal, // Menggunakan warna tema
-                            fontWeight: FontWeight.bold,
-                          ),
-                          recognizer:
-                              TapGestureRecognizer()
-                                ..onTap = () {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()));
-                                },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                  // TextButton(onPressed: () { /* Navigasi ke Lupa Password */ }, child: Text('Lupa Password?'))
+                ],
+              ),
             ),
           ),
         ),

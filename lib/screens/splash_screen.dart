@@ -1,0 +1,55 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sipatka/providers/auth_provider.dart';
+import 'package:sipatka/utils/app_theme.dart';
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    // Tunggu agar proses recover session di AuthProvider selesai
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final authProvider = context.read<AuthProvider>();
+
+    if (authProvider.isLoggedIn) {
+      if (authProvider.userRole == 'admin') {
+        Navigator.pushReplacementNamed(context, '/admin_dashboard');
+      } else {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    } else {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppTheme.primaryColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.school, size: 80, color: Colors.white),
+            SizedBox(height: 20),
+            Text('SIPATKA', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+            SizedBox(height: 20),
+            CircularProgressIndicator(color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+}
