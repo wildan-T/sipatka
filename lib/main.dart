@@ -46,8 +46,9 @@ class MyApp extends StatelessWidget {
         title: 'SIPATKA',
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
-        home: const SplashScreen(),
+        initialRoute: '/splash',
         routes: {
+          '/splash': (context) => const SplashScreen(),
           '/login': (context) => const LoginScreen(),
           '/dashboard': (context) => const DashboardScreen(),
           '/admin_dashboard': (context) => const AdminDashboardScreen(),

@@ -57,8 +57,9 @@ class AuthProvider with ChangeNotifier {
   Future<void> _fetchProfile() async {
     try {
       final userId = supabase.auth.currentUser!.id;
-      final data = await supabase.from('profiles').select().eq('id', userId).single();
-      
+      final data =
+          await supabase.from('profiles').select().eq('id', userId).single();
+
       // Tambahan pengecekan untuk memastikan data tidak kosong
       if (data.isNotEmpty) {
         _userModel = UserModel.fromSupabase(data);
@@ -77,7 +78,19 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
     try {
-      await supabase.auth.signInWithPassword(email: email, password: password);
+      // 1. Lakukan proses sign in seperti biasa
+      final AuthResponse res = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      // 2. JIKA login berhasil dan user ada, panggil _fetchProfile SECARA LANGSUNG
+      //    dan tunggu (await) sampai selesai.
+      if (res.user != null) {
+        await _fetchProfile();
+      } else {
+        _errorMessage = 'Login Gagal. Pengguna tidak ditemukan.';
+      }
     } on AuthException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
@@ -113,9 +126,9 @@ class AuthProvider with ChangeNotifier {
       // Setelah sign up, Supabase akan otomatis login dan onAuthStateChange akan terpicu
       // yang kemudian akan memanggil _fetchProfile.
     } on AuthException catch (e) {
-       _errorMessage = e.message;
+      _errorMessage = e.message;
     } catch (e) {
-       _errorMessage = 'Terjadi kesalahan tidak terduga.';
+      _errorMessage = 'Terjadi kesalahan tidak terduga.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -125,7 +138,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await supabase.auth.signOut();
   }
-  
+
   // --- FUNGSI BARU: RESET PASSWORD UNTUK SUPABASE ---
   Future<void> resetPassword({required String email}) async {
     _isLoading = true;
