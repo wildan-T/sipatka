@@ -30,18 +30,29 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
   // --- LOGIKA PENGAMBILAN DATA DIUBAH ---
   void _getReportData() {
     // Ambil akhir hari untuk memastikan semua transaksi di tanggal akhir terhitung
-    final endOfDay = DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
+    final endOfDay = DateTime(
+      _endDate.year,
+      _endDate.month,
+      _endDate.day,
+      23,
+      59,
+      59,
+    );
     setState(() {
       // Query langsung ke Supabase untuk mendapatkan transaksi lunas dalam rentang tanggal
       // dan langsung digabungkan (JOIN) dengan data profil siswa
       _reportFuture = supabase
           .from('payments')
-          .select('*, profiles!inner(student_name, parent_name)') // Lakukan JOIN
+          .select(
+            '*, profiles!inner(student_name, parent_name)',
+          ) // Lakukan JOIN
           .eq('status', 'paid')
           .gte('paid_date', _startDate.toIso8601String())
           .lte('paid_date', endOfDay.toIso8601String())
           .order('paid_date', ascending: false) // Urutkan dari yang terbaru
-          .then((data) => data.map((item) => Payment.fromSupabase(item)).toList());
+          .then(
+            (data) => data.map((item) => Payment.fromSupabase(item)).toList(),
+          );
     });
   }
 
@@ -61,7 +72,7 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
         }
       });
       // Otomatis refresh data setelah tanggal diubah dan filter diterapkan
-      _getReportData(); 
+      _getReportData();
     }
   }
 
@@ -83,27 +94,47 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return Center(child: Text("Terjadi error: ${snapshot.error}\nPastikan Anda sudah membuat index di Supabase jika diminta."));
+                    return Center(
+                      child: Text(
+                        "Terjadi error: ${snapshot.error}\nPastikan Anda sudah membuat index di Supabase jika diminta.",
+                      ),
+                    );
                   }
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text("Tidak ada transaksi lunas pada rentang tanggal ini."));
+                    return const Center(
+                      child: Text(
+                        "Tidak ada transaksi lunas pada rentang tanggal ini.",
+                      ),
+                    );
                   }
-                  
+
                   final transactions = snapshot.data!;
                   // Hitung total pendapatan dari daftar transaksi yang didapat
-                  final double totalIncome = transactions.fold(0.0, (sum, item) => sum + item.amount + item.denda);
+                  final double totalIncome = transactions.fold(
+                    0.0,
+                    (sum, item) => sum + item.amount,
+                  );
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSummaryCard(
                         title: 'Total Pendapatan (Sesuai Filter)',
-                        value: NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ').format(totalIncome),
+                        value: NumberFormat.currency(
+                          locale: 'id_ID',
+                          symbol: 'Rp ',
+                        ).format(totalIncome),
                         icon: Icons.account_balance_wallet_rounded,
                         color: Colors.green,
                       ),
                       const SizedBox(height: 24),
-                      const Text("Daftar Transaksi Lunas", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Daftar Transaksi Lunas",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const Divider(),
                       Expanded(
                         child: ListView.builder(
@@ -134,9 +165,21 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Expanded(child: _buildDatePickerField("Dari Tanggal", _startDate, true)),
+                Expanded(
+                  child: _buildDatePickerField(
+                    "Dari Tanggal",
+                    _startDate,
+                    true,
+                  ),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: _buildDatePickerField("Sampai Tanggal", _endDate, false)),
+                Expanded(
+                  child: _buildDatePickerField(
+                    "Sampai Tanggal",
+                    _endDate,
+                    false,
+                  ),
+                ),
               ],
             ),
           ],
@@ -154,7 +197,10 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
           onTap: () => _selectDate(context, isStart),
           child: Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
               children: [
                 const Icon(Icons.calendar_today, size: 18),
@@ -168,7 +214,12 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
     );
   }
 
-  Widget _buildSummaryCard({required String title, required String value, required IconData icon, required Color color}) {
+  Widget _buildSummaryCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -181,8 +232,20 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
-                  Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -193,7 +256,10 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
   }
 
   Widget _buildTransactionTile(Payment payment) {
-    final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
+    final currencyFormat = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+    );
     final studentName = payment.studentProfile?.studentName ?? 'Siswa Dihapus';
 
     return Card(
@@ -201,11 +267,13 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
       child: ListTile(
         leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
         title: Text(studentName),
-        subtitle: Text("Pembayaran: ${payment.month} ${payment.year}\nDibayar pada: ${DateFormat('dd MMM yyyy').format(payment.paidDate!)}"),
+        subtitle: Text(
+          "Pembayaran: ${payment.month} ${payment.year}\nDibayar pada: ${DateFormat('dd MMM yyyy').format(payment.paidDate!)}",
+        ),
         isThreeLine: true,
         trailing: Text(
-          currencyFormat.format(payment.amount + payment.denda),
-          style: const TextStyle(fontWeight: FontWeight.bold)
+          currencyFormat.format(payment.amount),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );

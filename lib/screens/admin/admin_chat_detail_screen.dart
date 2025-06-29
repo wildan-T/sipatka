@@ -1,8 +1,9 @@
 // lib/screens/admin/admin_chat_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // <-- Tambahkan import ini
 import 'package:provider/provider.dart';
-import 'package:sipatka/main.dart'; // Untuk akses client supabase
+import 'package:sipatka/main.dart';
 import 'package:sipatka/models/user_model.dart';
 import 'package:sipatka/providers/auth_provider.dart';
 import 'package:sipatka/utils/app_theme.dart';
@@ -23,16 +24,17 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Ambil ID admin yang sedang login
+
     _adminId = context.read<AuthProvider>().userModel!.uid;
 
-    // Siapkan stream untuk mendengarkan pesan real-time dari Supabase
     _messagesStream = supabase
         .from('messages')
         .stream(primaryKey: ['id'])
-        .eq('user_id', widget.parent.uid) // Ambil pesan untuk user ini
-        .order('created_at', ascending: false); // Urutkan dari terbaru
+        .eq('user_id', widget.parent.uid)
+        .order(
+          'created_at',
+          ascending: true,
+        ); // Diubah menjadi ascending untuk urutan chat normal
   }
 
   @override
@@ -47,16 +49,18 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
     _messageController.clear();
 
     try {
-      // Kirim pesan ke tabel 'messages' di Supabase
       await supabase.from('messages').insert({
-        'user_id': widget.parent.uid, // ID percakapan, merujuk ke wali murid
-        'sender_id': _adminId,       // Pengirim adalah admin yang sedang login
+        'user_id': widget.parent.uid,
+        'sender_id': _adminId,
         'content': content,
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal mengirim pesan: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Gagal mengirim pesan: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -65,9 +69,7 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Chat dengan ${widget.parent.parentName}"),
-      ),
+      appBar: AppBar(title: Text("Chat dengan ${widget.parent.parentName}")),
       body: Column(
         children: [
           Expanded(
@@ -82,20 +84,26 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Center(
-                    child: Text("Belum ada percakapan dengan ${widget.parent.parentName}."),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        "Belum ada percakapan dengan ${widget.parent.parentName}. Mulailah percakapan!",
+                      ),
+                    ),
                   );
                 }
                 final messages = snapshot.data!;
                 return ListView.builder(
-                  reverse: true,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final messageData = messages[index];
-                    final bool isFromAdmin = messageData['sender_id'] == _adminId;
+                    final bool isFromAdmin =
+                        messageData['sender_id'] == _adminId;
                     return _buildMessageBubble(
                       text: messageData['content'] ?? '',
                       isFromAdmin: isFromAdmin,
+                      timestamp: DateTime.parse(messageData['created_at']),
                     );
                   },
                 );
@@ -108,7 +116,11 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
               boxShadow: [
-                BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5),
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 5,
+                ),
               ],
             ),
             child: Row(
@@ -120,11 +132,14 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
                       hintText: 'Ketik balasan...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide.none,
                       ),
-                      fillColor: Colors.white,
+                      fillColor: Colors.grey.shade200,
                       filled: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
@@ -144,51 +159,55 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
     );
   }
 
-  Widget _buildMessageBubble({required String text, required bool isFromAdmin}) {
-    // Jika pesan dari admin, tampilkan di kanan. Jika dari user, di kiri.
+  // --- WIDGET GELEMBUNG CHAT YANG DISEMPURNAKAN ---
+  Widget _buildMessageBubble({
+    required String text,
+    required bool isFromAdmin,
+    required DateTime timestamp,
+  }) {
+    final alignment =
+        isFromAdmin ? MainAxisAlignment.end : MainAxisAlignment.start;
+    final color =
+        isFromAdmin ? Theme.of(context).primaryColor : Colors.grey[300];
+    final textColor = isFromAdmin ? Colors.white : Colors.black87;
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(16),
+      topRight: const Radius.circular(16),
+      bottomLeft:
+          isFromAdmin ? const Radius.circular(16) : const Radius.circular(0),
+      bottomRight:
+          isFromAdmin ? const Radius.circular(0) : const Radius.circular(16),
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment: isFromAdmin ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: alignment,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!isFromAdmin) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.accentColor,
-              child: const Icon(Icons.person, size: 16, color: Colors.white),
-            ),
-            const SizedBox(width: 8),
-          ],
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
               decoration: BoxDecoration(
-                color: isFromAdmin
-                    ? AppTheme.primaryColor
-                    : Colors.grey[200],
-                borderRadius: BorderRadius.only(
-                   topLeft: const Radius.circular(16),
-                   topRight: const Radius.circular(16),
-                   bottomLeft: isFromAdmin ? const Radius.circular(16) : const Radius.circular(0),
-                   bottomRight: isFromAdmin ? const Radius.circular(0) : const Radius.circular(16),
-                ),
+                color: color,
+                borderRadius: borderRadius,
               ),
-              child: Text(
-                text,
-                style: TextStyle(
-                  color: isFromAdmin ? Colors.white : Colors.black87,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(text, style: TextStyle(color: textColor, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('HH:mm').format(timestamp.toLocal()),
+                    style: TextStyle(
+                      color: isFromAdmin ? Colors.white70 : Colors.black54,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          if (isFromAdmin) ...[
-            const SizedBox(width: 8),
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.primaryColor,
-              child: Icon(Icons.support_agent, size: 16, color: Colors.white),
-            ),
-          ],
         ],
       ),
     );

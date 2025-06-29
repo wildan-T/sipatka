@@ -13,24 +13,67 @@ class PaymentProvider with ChangeNotifier {
 
   double get totalPaidAmount => _payments
       .where((p) => p.status == PaymentStatus.paid)
-      .fold(0.0, (sum, item) => sum + item.amount + item.denda);
+      .fold(0.0, (sum, item) => sum + item.amount);
 
+  // Future<void> fetchPayments() async {
+  //   final user = supabase.auth.currentUser;
+  //   if (user == null) return;
+  //   _isLoading = true;
+  //   notifyListeners();
+  //   try {
+  //     // 1. Dapatkan dulu ID siswa berdasarkan parent_id (user.id yang login)
+  //     final studentResponse =
+  //         await supabase
+  //             .from('students')
+  //             .select('id')
+  //             .eq('parent_id', user.id)
+  //             .single(); // Asumsi satu orang tua hanya punya satu siswa terdaftar
+
+  //     // Jika data siswa tidak ditemukan, hentikan proses.
+  //     if (studentResponse.isEmpty) {
+  //       print("Tidak ada data siswa ditemukan untuk orang tua ini.");
+  //       _payments = [];
+  //     } else {
+  //       final studentId = studentResponse['id'];
+
+  //       // 2. Gunakan studentId untuk mengambil data dari tabel payments
+  //       final data = await supabase
+  //           .from('payments')
+  //           .select()
+  //           .eq('student_id', studentId) // <-- Menggunakan kolom yang BENAR
+  //           .order('created_at', ascending: false);
+
+  //       _payments = data.map((item) => Payment.fromSupabase(item)).toList();
+  //     }
+  //   } catch (e) {
+  //     print("Error fetching payments: $e");
+  //     _payments = [];
+  //   }
+  //   _isLoading = false;
+  //   notifyListeners();
+  // }
   Future<void> fetchPayments() async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
     _isLoading = true;
     notifyListeners();
+
     try {
+      // --- AWAL KODE BARU ---
+      // RLS policy akan secara otomatis mengurus keamanan dan filter.
+      // Kita hanya perlu mengambil semua data dari tabel 'payments'.
       final data = await supabase
           .from('payments')
           .select()
-          .eq('user_id', user.id)
           .order('created_at', ascending: false);
+
       _payments = data.map((item) => Payment.fromSupabase(item)).toList();
+      // --- AKHIR KODE BARU ---
     } catch (e) {
       print("Error fetching payments: $e");
       _payments = [];
     }
+
     _isLoading = false;
     notifyListeners();
   }
@@ -45,20 +88,24 @@ class PaymentProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final fileName = 'proofs/${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName =
+          'proofs/${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
       await supabase.storage.from('proofs').upload(fileName, proofImage);
-      final proofImageUrl = supabase.storage.from('proofs').getPublicUrl(fileName);
+      final proofImageUrl = supabase.storage
+          .from('proofs')
+          .getPublicUrl(fileName);
 
-      final updates = selectedPayments.map((p) {
-        return {
-          'id': p.id,
-          'status': 'pending',
-          'proof_of_payment_url': proofImageUrl,
-          'payment_method': paymentMethod,
-          'paid_date': DateTime.now().toIso8601String(),
-          'is_verified': false,
-        };
-      }).toList();
+      final updates =
+          selectedPayments.map((p) {
+            return {
+              'id': p.id,
+              'status': 'pending',
+              'proof_of_payment_url': proofImageUrl,
+              'payment_method': paymentMethod,
+              'paid_date': DateTime.now().toIso8601String(),
+              'is_verified': false,
+            };
+          }).toList();
 
       await supabase.from('payments').upsert(updates);
       await fetchPayments();
