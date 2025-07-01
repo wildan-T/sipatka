@@ -1,4 +1,4 @@
-// lib/screens/payment/payment_screen.dart
+// lib/screens/payment/upload_proof_screen.dart
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,234 +9,6 @@ import 'package:sipatka/utils/app_theme.dart';
 import '../../providers/payment_provider.dart';
 import '../../models/payment_model.dart';
 
-class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
-
-  @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
-}
-
-class _PaymentScreenState extends State<PaymentScreen> {
-  // State untuk menyimpan daftar tagihan yang di-checklist
-  final List<Payment> _selectedPayments = [];
-  double _totalSelectedAmount = 0.0;
-
-  void _onPaymentSelected(bool? isSelected, Payment payment) {
-    setState(() {
-      if (isSelected == true) {
-        _selectedPayments.add(payment);
-      } else {
-        _selectedPayments.remove(payment);
-      }
-      // Hitung ulang total setiap kali ada perubahan
-      _totalSelectedAmount = _selectedPayments.fold(
-        0.0,
-        (sum, item) => sum + item.amount,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Consumer<PaymentProvider>(
-        builder: (context, paymentProvider, child) {
-          if (paymentProvider.isLoading && paymentProvider.payments.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final unpaidPayments =
-              paymentProvider.payments
-                  .where(
-                    (p) =>
-                        p.status == PaymentStatus.unpaid ||
-                        p.status == PaymentStatus.overdue,
-                  )
-                  .toList();
-
-          return Column(
-            children: [
-              Expanded(
-                child:
-                    unpaidPayments.isEmpty
-                        ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                size: 80,
-                                color: Colors.green,
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'Semua tagihan sudah lunas!',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                        : RefreshIndicator(
-                          onRefresh: () => paymentProvider.fetchPayments(),
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(
-                              16,
-                              16,
-                              16,
-                              120,
-                            ), // Padding bawah untuk tombol
-                            itemCount: unpaidPayments.length,
-                            itemBuilder: (context, index) {
-                              final payment = unpaidPayments[index];
-                              final isSelected = _selectedPayments.contains(
-                                payment,
-                              );
-                              return _buildPaymentCard(
-                                context,
-                                payment,
-                                isSelected,
-                              );
-                            },
-                          ),
-                        ),
-              ),
-            ],
-          );
-        },
-      ),
-      // Tombol bayar dibuat 'mengambang' di bawah dan hanya muncul jika ada yang dipilih
-      bottomSheet:
-          _selectedPayments.isNotEmpty ? _buildPaymentButton(context) : null,
-    );
-  }
-
-  Widget _buildPaymentCard(
-    BuildContext context,
-    Payment payment,
-    bool isSelected,
-  ) {
-    final currencyFormat = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-    );
-    final isOverdue = payment.status == PaymentStatus.overdue;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
-          width: isSelected ? 2 : 1,
-        ),
-      ),
-      child: CheckboxListTile(
-        value: isSelected,
-        onChanged: (bool? value) => _onPaymentSelected(value, payment),
-        title: Text(
-          '${payment.month} ${payment.year}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Jatuh tempo: ${DateFormat('dd MMM yyyy').format(payment.dueDate)}',
-            ),
-          ],
-        ),
-        secondary: Text(
-          currencyFormat.format(payment.amount),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: isOverdue ? Colors.red : AppTheme.textPrimary,
-          ),
-        ),
-        controlAffinity: ListTileControlAffinity.leading,
-        activeColor: AppTheme.primaryColor,
-      ),
-    );
-  }
-
-  Widget _buildPaymentButton(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(
-        16,
-      ).copyWith(bottom: MediaQuery.of(context).padding.bottom + 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total Dipilih (${_selectedPayments.length} bulan)',
-                style: const TextStyle(fontSize: 16),
-              ),
-              Text(
-                NumberFormat.currency(
-                  locale: 'id_ID',
-                  symbol: 'Rp ',
-                ).format(_totalSelectedAmount),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () => _showPaymentDialog(context),
-              child: const Text('Lanjutkan Pembayaran'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPaymentDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => PaymentDialog(
-            selectedPayments: _selectedPayments,
-            totalAmount: _totalSelectedAmount,
-            onPaymentSuccess: () {
-              setState(() {
-                _selectedPayments.clear();
-                _totalSelectedAmount = 0.0;
-              });
-            },
-          ),
-    );
-  }
-}
-
-// Pisahkan Dialog menjadi widget tersendiri
 class PaymentDialog extends StatefulWidget {
   final List<Payment> selectedPayments;
   final double totalAmount;
@@ -279,7 +51,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
   };
 
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    ); // Menambahkan kompresi gambar
     if (pickedFile != null) {
       setState(() => _imageFile = File(pickedFile.path));
     }
@@ -287,21 +62,26 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   Future<void> _submitPayment() async {
     if (_selectedMethod == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Pilih metode pembayaran.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih metode pembayaran terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
     if (_imageFile == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Unggah bukti pembayaran.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unggah bukti pembayaran terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
     setState(() => _isUploading = true);
 
-    // Panggil FUNGSI BARU di provider
     final success = await context
         .read<PaymentProvider>()
         .submitMultiplePayments(
@@ -317,14 +97,18 @@ class _PaymentDialogState extends State<PaymentDialog> {
       widget.onPaymentSuccess();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Bukti pembayaran berhasil diunggah!'),
+          content: Text(
+            'Bukti pembayaran berhasil diunggah! Menunggu verifikasi admin.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Gagal mengunggah bukti pembayaran.'),
+          content: Text(
+            'Gagal mengunggah bukti pembayaran. Silakan coba lagi.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -334,22 +118,33 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final details = paymentDetails[_selectedMethod];
     return AlertDialog(
-      title: const Text('Detail Pembayaran'),
+      title: const Text('Konfirmasi Pembayaran'),
+      // --- KONTEN DI-UPDATE AGAR LEBIH RAPI ---
       content:
           _isUploading
               ? const SizedBox(
-                height: 100,
-                child: Center(child: CircularProgressIndicator()),
+                height: 150,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text("Mengunggah bukti..."),
+                    ],
+                  ),
+                ),
               )
               : SingleChildScrollView(
                 child: ListBody(
                   children: <Widget>[
-                    Text(
-                      'Pembayaran untuk:',
-                      style: TextStyle(color: Colors.grey.shade700),
+                    const Text(
+                      'Anda akan membayar tagihan untuk:',
+                      style: TextStyle(color: AppTheme.textSecondary),
                     ),
+                    const SizedBox(height: 4),
+                    // Tampilkan daftar bulan yang akan dibayar
                     ...widget.selectedPayments.map(
                       (p) => Text(
                         '- ${p.month} ${p.year}',
@@ -357,6 +152,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
                       ),
                     ),
                     const Divider(height: 24),
+
+                    // Dropdown metode pembayaran
                     DropdownButtonFormField<String>(
                       value: _selectedMethod,
                       hint: const Text('Pilih metode pembayaran'),
@@ -376,64 +173,160 @@ class _PaymentDialogState extends State<PaymentDialog> {
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    if (details != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Silakan transfer ke:',
-                        style: TextStyle(color: AppTheme.textSecondary),
-                      ),
-                      Text(
-                        '${details['bank']}: ${details['rekening']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'a/n: ${details['nama']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
                     const SizedBox(height: 16),
-                    Text(
-                      'Total Bayar: ${currencyFormat.format(widget.totalAmount)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        height: 120,
-                        width: double.infinity,
+
+                    // Detail rekening (muncul setelah metode dipilih)
+                    if (paymentDetails[_selectedMethod] != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
+                          color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child:
-                            _imageFile == null
-                                ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_a_photo_outlined,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Unggah Bukti Bayar",
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Silakan transfer sejumlah:',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            Text(
+                              currencyFormat.format(widget.totalAmount),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Ke rekening ${paymentDetails[_selectedMethod]!['bank']}:',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            Text(
+                              '${paymentDetails[_selectedMethod]!['rekening']} a/n ${paymentDetails[_selectedMethod]!['nama']}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 24),
+
+                    // Tombol dan preview unggah bukti
+                    const Text(
+                      'Unggah Bukti Pembayaran:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Stack(
+                        // Gunakan Stack untuk menumpuk widget
+                        alignment: Alignment.center,
+                        children: [
+                          // Widget 1: Latar belakang (Container dengan gambar atau ikon)
+                          Container(
+                            height: 150,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.grey.shade400,
+                                style: BorderStyle.solid,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child:
+                                _imageFile == null
+                                    ? Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.add_a_photo_outlined,
+                                          color: Colors.grey.shade600,
+                                          size: 40,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "Ketuk untuk memilih gambar",
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                    : ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(
+                                        _imageFile!,
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
-                                  ],
-                                )
-                                : ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    _imageFile!,
-                                    fit: BoxFit.cover,
+                          ),
+
+                          // Widget 2: Tombol "Lihat Lebih Besar" (hanya muncul jika gambar ada)
+                          if (_imageFile != null)
+                            Positioned(
+                              // Gunakan Positioned untuk menempatkan tombol di pojok
+                              bottom: 8,
+                              right: 8,
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: Colors.black.withOpacity(
+                                    0.5,
+                                  ), // Latar belakang agar terbaca
+                                  side: const BorderSide(color: Colors.white),
+                                ),
+                                icon: const Icon(
+                                  Icons.zoom_out_map,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  'Lihat Lebih Besar',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white,
                                   ),
                                 ),
+                                onPressed: () {
+                                  // Dialog untuk menampilkan gambar secara penuh
+                                  showDialog(
+                                    context: context,
+                                    builder:
+                                        (_) => Dialog(
+                                          child: Stack(
+                                            alignment: Alignment.topRight,
+                                            children: [
+                                              InteractiveViewer(
+                                                // Widget agar bisa di-zoom
+                                                child: Image.file(_imageFile!),
+                                              ),
+                                              IconButton(
+                                                icon: const CircleAvatar(
+                                                  backgroundColor:
+                                                      Colors.black54,
+                                                  child: Icon(
+                                                    Icons.close,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                onPressed:
+                                                    () =>
+                                                        Navigator.pop(context),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],

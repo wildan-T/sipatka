@@ -25,7 +25,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       appBar: AppBar(title: const Text('Manajemen Siswa & Pesan')),
       body: Column(
         children: [
-          // --- KOLOM PENCARIAN ---
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -35,7 +34,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                 });
               },
               decoration: InputDecoration(
-                labelText: 'Cari Siswa...',
+                labelText: 'Cari Siswa atau Wali...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -43,9 +42,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
               ),
             ),
           ),
-          // --- DAFTAR SISWA (STREAMBUILDER) ---
           Expanded(
-            child: StreamBuilder<List<UserModel>>(
+            // --- PERBAIKAN TIPE DATA STREAMBUILDER ---
+            child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: adminProvider.getStudents(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -60,18 +59,19 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                   );
                 }
 
-                // Filter siswa berdasarkan query pencarian
                 final allStudents = snapshot.data!;
                 final filteredStudents =
                     _searchQuery.isEmpty
                         ? allStudents
                         : allStudents.where((student) {
-                          return student.studentName.toLowerCase().contains(
-                                _searchQuery,
-                              ) ||
-                              student.parentName.toLowerCase().contains(
-                                _searchQuery,
-                              );
+                          final studentName =
+                              (student['student_name'] as String? ?? '')
+                                  .toLowerCase();
+                          final parentName =
+                              (student['parent_name'] as String? ?? '')
+                                  .toLowerCase();
+                          return studentName.contains(_searchQuery) ||
+                              parentName.contains(_searchQuery);
                         }).toList();
 
                 if (filteredStudents.isEmpty) {
@@ -82,8 +82,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   itemCount: filteredStudents.length,
                   itemBuilder: (context, index) {
-                    final student = filteredStudents[index];
-                    return _buildStudentTile(context, student);
+                    // --- Bekerja dengan Map, bukan UserModel ---
+                    final studentData = filteredStudents[index];
+                    return _buildStudentTile(context, studentData);
                   },
                 );
               },
@@ -94,32 +95,44 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     );
   }
 
-  Widget _buildStudentTile(BuildContext context, UserModel student) {
+  // --- PERBAIKAN: Widget ini sekarang menerima Map<String, dynamic> ---
+  Widget _buildStudentTile(
+    BuildContext context,
+    Map<String, dynamic> studentData,
+  ) {
+    final studentName = studentData['student_name'] ?? 'Tanpa Nama';
+    final parentName = studentData['parent_name'] ?? 'Tanpa Wali';
+    final className = studentData['class_name'] ?? 'Tanpa Kelas';
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          // <-- Jadikan async
+          // Tunggu hasil dari halaman detail
+          final deletionSuccess = await Navigator.push(
             context,
             MaterialPageRoute(
               builder:
                   (_) => StudentDetailScreen(
-                    // Kirim ID dan nama siswa
-                    studentId:
-                        student.uid, // student.uid sekarang adalah ID siswa
-                    initialStudentName: student.studentName,
+                    studentId: studentData['student_id'],
+                    initialStudentName: studentName,
                   ),
             ),
           );
-        },
 
+          // Jika hasilnya adalah 'true', artinya ada penghapusan
+          if (deletionSuccess == true) {
+            // Panggil setState untuk "memaksa" widget membangun ulang dirinya,
+            // yang akan membuat StreamBuilder mengambil data terbaru.
+            setState(() {});
+          }
+        },
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).primaryColorLight,
           child: Text(
-            student.studentName.isNotEmpty
-                ? student.studentName[0].toUpperCase()
-                : 'S',
+            studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S',
             style: TextStyle(
               color: Theme.of(context).primaryColor,
               fontWeight: FontWeight.bold,
@@ -127,22 +140,31 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           ),
         ),
         title: Text(
-          student.studentName,
+          studentName,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        // --- INFORMASI TAMBAHAN ---
-        subtitle: Text(
-          'Wali: ${student.parentName} | Kelas: ${student.className}',
-        ),
+        subtitle: Text('Wali: $parentName | Kelas: $className'),
         trailing: IconButton(
-          tooltip: "Chat dengan ${student.parentName}",
+          tooltip: "Chat dengan $parentName",
           icon: const Icon(Icons.chat_bubble_outline),
           color: Theme.of(context).primaryColor,
           onPressed: () {
+            // --- KUNCI PERBAIKAN: Membuat UserModel on-the-fly dengan ID yang BENAR ---
+            final parentForChat = UserModel(
+              uid: studentData['parent_id'], // Gunakan parent_id untuk chat
+              parentName: parentName,
+              // Isi field lain dengan data yang relevan atau nilai default
+              studentName: studentName,
+              className: className,
+              email: '', // Email tidak dibutuhkan untuk navigasi chat
+              role: 'user',
+              saldo: 0.0,
+            );
+
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => AdminChatDetailScreen(parent: student),
+                builder: (_) => AdminChatDetailScreen(parent: parentForChat),
               ),
             );
           },

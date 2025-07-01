@@ -2,9 +2,9 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // <-- PERBAIKAN: Import ditambahkan
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart'; // <-- PERBAIKAN: Import ditambahkan
+import 'package:sipatka/screens/payment/upload_proof_screen.dart';
 import 'package:sipatka/utils/app_theme.dart';
 import '../../providers/payment_provider.dart';
 import '../../models/payment_model.dart';
@@ -93,7 +93,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                         )
                         : RefreshIndicator(
-                          onRefresh: () => paymentProvider.fetchPayments(),
+                          onRefresh: () async {
+                            // Kosongkan daftar pilihan dan reset totalnya terlebih dahulu
+                            setState(() {
+                              _selectedPayments.clear();
+                              _totalSelectedAmount = 0.0;
+                            });
+
+                            // Kemudian, baru ambil data tagihan yang baru dari server
+                            await context
+                                .read<PaymentProvider>()
+                                .fetchPayments();
+                          },
+
                           child: ListView.builder(
                             padding: const EdgeInsets.fromLTRB(
                               16,
@@ -245,221 +257,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
               });
             },
           ),
-    );
-  }
-}
-
-class PaymentDialog extends StatefulWidget {
-  final List<Payment> selectedPayments;
-  final double totalAmount;
-  final VoidCallback onPaymentSuccess;
-
-  const PaymentDialog({
-    super.key,
-    required this.selectedPayments,
-    required this.totalAmount,
-    required this.onPaymentSuccess,
-  });
-
-  @override
-  State<PaymentDialog> createState() => _PaymentDialogState();
-}
-
-class _PaymentDialogState extends State<PaymentDialog> {
-  File? _imageFile;
-  final ImagePicker _picker = ImagePicker();
-  bool _isUploading = false;
-  String? _selectedMethod;
-  final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
-
-  final Map<String, Map<String, String>> paymentDetails = {
-    'Transfer Bank (BCA)': {
-      'bank': 'BCA',
-      'rekening': '7295237082',
-      'nama': 'YAYASAN AN-NAAFI\'NUR',
-    },
-    'Transfer Bank (Mandiri)': {
-      'bank': 'Bank Mandiri',
-      'rekening': '1760005209604',
-      'nama': 'YAYASAN AN-NAAFI\'NUR',
-    },
-    'E-Wallet (OVO/GoPay/DANA)': {
-      'bank': 'OVO/GoPay/DANA',
-      'rekening': '081290589185',
-      'nama': 'TK AN-NAAFI\'NUR',
-    },
-  };
-
-  Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() => _imageFile = File(pickedFile.path));
-    }
-  }
-
-  Future<void> _submitPayment() async {
-    if (_selectedMethod == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Pilih metode pembayaran.')));
-      return;
-    }
-    if (_imageFile == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Unggah bukti pembayaran.')));
-      return;
-    }
-
-    setState(() => _isUploading = true);
-
-    final success = await context
-        .read<PaymentProvider>()
-        .submitMultiplePayments(
-          selectedPayments: widget.selectedPayments,
-          proofImage: _imageFile!,
-          paymentMethod: _selectedMethod!,
-        );
-
-    if (!mounted) return;
-
-    if (success) {
-      Navigator.pop(context);
-      widget.onPaymentSuccess();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bukti pembayaran berhasil diunggah!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal mengunggah bukti pembayaran.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-    setState(() => _isUploading = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final details = paymentDetails[_selectedMethod];
-    return AlertDialog(
-      title: const Text('Detail Pembayaran'),
-      content:
-          _isUploading
-              ? const SizedBox(
-                height: 100,
-                child: Center(child: CircularProgressIndicator()),
-              )
-              : SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    Text(
-                      'Pembayaran untuk:',
-                      style: TextStyle(color: Colors.grey.shade700),
-                    ),
-                    ...widget.selectedPayments.map(
-                      (p) => Text(
-                        '- ${p.month} ${p.year}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const Divider(height: 24),
-                    DropdownButtonFormField<String>(
-                      value: _selectedMethod,
-                      hint: const Text('Pilih metode pembayaran'),
-                      isExpanded: true,
-                      items:
-                          paymentDetails.keys
-                              .map(
-                                (method) => DropdownMenuItem(
-                                  value: method,
-                                  child: Text(method),
-                                ),
-                              )
-                              .toList(),
-                      onChanged:
-                          (value) => setState(() => _selectedMethod = value),
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    if (details != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Silakan transfer ke:',
-                        style: TextStyle(color: AppTheme.textSecondary),
-                      ),
-                      Text(
-                        '${details['bank']}: ${details['rekening']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'a/n: ${details['nama']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Text(
-                      'Total Bayar: ${currencyFormat.format(widget.totalAmount)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        height: 120,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child:
-                            _imageFile == null
-                                ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_a_photo_outlined,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Unggah Bukti Bayar",
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                                : ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    _imageFile!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-      actions: [
-        TextButton(
-          onPressed: _isUploading ? null : () => Navigator.pop(context),
-          child: const Text('Batal'),
-        ),
-        ElevatedButton(
-          onPressed: _isUploading ? null : _submitPayment,
-          child: const Text('Kirim Bukti Bayar'),
-        ),
-      ],
     );
   }
 }

@@ -1,7 +1,6 @@
 // lib/screens/admin/admin_chat_detail_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // <-- Tambahkan import ini
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sipatka/main.dart';
 import 'package:sipatka/models/user_model.dart';
@@ -18,6 +17,7 @@ class AdminChatDetailScreen extends StatefulWidget {
 
 class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
   final _messageController = TextEditingController();
+  final _scrollController = ScrollController(); // Controller untuk auto-scroll
   late final Stream<List<Map<String, dynamic>>> _messagesStream;
   late final String _adminId;
 
@@ -31,16 +31,25 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
         .from('messages')
         .stream(primaryKey: ['id'])
         .eq('user_id', widget.parent.uid)
-        .order(
-          'created_at',
-          ascending: true,
-        ); // Diubah menjadi ascending untuk urutan chat normal
+        .order('created_at', ascending: true); // Urutan ascending untuk chat
   }
 
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    // Fungsi untuk auto-scroll ke pesan terbaru
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -76,6 +85,11 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: _messagesStream,
               builder: (context, snapshot) {
+                // Auto-scroll saat ada data baru
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _scrollToBottom(),
+                );
+
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -94,6 +108,7 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
                 }
                 final messages = snapshot.data!;
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -159,12 +174,12 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
     );
   }
 
-  // --- WIDGET GELEMBUNG CHAT YANG DISEMPURNAKAN ---
   Widget _buildMessageBubble({
     required String text,
     required bool isFromAdmin,
     required DateTime timestamp,
   }) {
+    // Kode untuk widget gelembung chat ini sama seperti respons sebelumnya, tidak perlu diubah.
     final alignment =
         isFromAdmin ? MainAxisAlignment.end : MainAxisAlignment.start;
     final color =

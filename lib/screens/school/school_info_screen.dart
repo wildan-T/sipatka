@@ -40,42 +40,39 @@ class SchoolInfoScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  'Akreditasi B',
-                  style: TextStyle(color: Colors.white70),
-                ),
+                Text('Akreditasi B', style: TextStyle(color: Colors.white70)),
               ],
             ),
           ),
           const SizedBox(height: 24),
 
           // Contact Information
-          _buildInfoCard(
-            'Kontak & Alamat',
-            [
-              _buildInfoRow(Icons.location_on, 'Alamat',
-                  'Perumahan Garden City (Lokasi detail menyusul)'),
-              _buildInfoRow(Icons.person, 'Kepala Sekolah', 'EVIE SULIYANTI'),
-              _buildInfoRow(
-                  Icons.support_agent, 'Operator', 'Virda Asmarani Alexandra'),
-              _buildInfoRow(Icons.phone, 'Telepon', '+6281234567890'),
-              _buildInfoRow(Icons.email, 'Email', 'info@tkannaafinur.sch.id'),
-            ],
-          ),
+          _buildInfoCard('Kontak & Alamat', [
+            _buildInfoRow(
+              Icons.location_on,
+              'Alamat',
+              'Perumahan Garden City (Lokasi detail menyusul)',
+            ),
+            _buildInfoRow(Icons.person, 'Kepala Sekolah', 'EVIE SULIYANTI'),
+            _buildInfoRow(
+              Icons.support_agent,
+              'Operator',
+              'Virda Asmarani Alexandra',
+            ),
+            _buildInfoRow(Icons.phone, 'Telepon', '+6281234567890'),
+            _buildInfoRow(Icons.email, 'Email', 'info@tkannaafinur.sch.id'),
+          ]),
           const SizedBox(height: 16),
 
           // School Details
-          _buildInfoCard(
-            'Detail Sekolah',
-            [
-              _buildInfoRow(Icons.numbers, 'NPSN', '69909283'),
-              _buildInfoRow(Icons.business, 'Status', 'Swasta'),
-              _buildInfoRow(Icons.account_balance, 'Kepemilikan', 'Yayasan'),
-              _buildInfoRow(Icons.book, 'Kurikulum', 'Kurikulum Merdeka'),
-              _buildInfoRow(Icons.calendar_today, 'SK Pendirian', '2012-03-08'),
-              _buildInfoRow(Icons.verified, 'SK Operasional', '2012-11-19'),
-            ],
-          ),
+          _buildInfoCard('Detail Sekolah', [
+            _buildInfoRow(Icons.numbers, 'NPSN', '69909283'),
+            _buildInfoRow(Icons.business, 'Status', 'Swasta'),
+            _buildInfoRow(Icons.account_balance, 'Kepemilikan', 'Yayasan'),
+            _buildInfoRow(Icons.book, 'Kurikulum', 'Kurikulum Merdeka'),
+            _buildInfoRow(Icons.calendar_today, 'SK Pendirian', '2012-03-08'),
+            _buildInfoRow(Icons.verified, 'SK Operasional', '2012-11-19'),
+          ]),
           const SizedBox(height: 24),
 
           // Action Buttons
@@ -84,7 +81,7 @@ class SchoolInfoScreen extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _openMaps,
-                  icon: const Icon(Icons.map),
+                  icon: const Icon(Icons.map, color: Colors.white),
                   label: const Text('Lihat Lokasi'),
                 ),
               ),
@@ -92,7 +89,7 @@ class SchoolInfoScreen extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _callSchool,
-                  icon: const Icon(Icons.phone),
+                  icon: const Icon(Icons.phone, color: Colors.white),
                   label: const Text('Hubungi'),
                 ),
               ),
@@ -153,7 +150,8 @@ class SchoolInfoScreen extends StatelessWidget {
   void _openMaps() async {
     // Ganti dengan koordinat atau query pencarian yang lebih spesifik
     const query = "TK An-Naafi'Nur Perumahan Garden City";
-    final url = 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}';
+    final url =
+        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     }

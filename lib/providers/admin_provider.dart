@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:sipatka/main.dart';
-import 'package:sipatka/models/user_model.dart';
 import 'package:sipatka/models/payment_model.dart'; // Pastikan import ini ada jika digunakan di fungsi lain
 
 class AdminProvider with ChangeNotifier {
@@ -10,24 +9,12 @@ class AdminProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   // --- FUNGSI getStudents() DIPERBAIKI DI SINI ---
-  Stream<List<UserModel>> getStudents() {
-    // Memanggil RPC function yang sudah kita buat
-    return supabase.rpc('get_all_students_with_parents').asStream().map((
-      response,
-    ) {
-      return (response as List).map((item) {
-        return UserModel(
-          uid: item['student_id'],
-          studentName: item['student_name'],
-          className: item['class_name'],
-          parentName: item['parent_name'],
-          // Isi field lain dengan nilai default jika diperlukan
-          email: '',
-          role: 'user',
-          saldo: 0,
-        );
-      }).toList();
-    });
+  Stream<List<Map<String, dynamic>>> getStudents() {
+    // Memanggil fungsi RPC yang sudah kita buat sebelumnya
+    return supabase
+        .rpc('get_all_students_with_parents')
+        .asStream()
+        .map((response) => (response as List).cast<Map<String, dynamic>>());
   }
 
   // --- KODE LAINNYA DI DALAM CLASS TETAP SAMA ---
@@ -46,7 +33,31 @@ class AdminProvider with ChangeNotifier {
     DateTime endDate,
   ) {}
 
-  confirmPayment(String userId, String id, double parse) {}
+  // --- FUNGSI BARU UNTUK KONFIRMASI & PENOLAKAN ---
 
-  rejectPayment(String userId, String id, String trim) {}
+  Future<String> confirmPayment(String paymentId) async {
+    try {
+      final result = await supabase.rpc(
+        'confirm_payment',
+        params: {'p_payment_id': paymentId},
+      );
+      return result as String;
+    } catch (e) {
+      print("Error confirming payment: $e");
+      throw 'Gagal mengonfirmasi pembayaran: $e';
+    }
+  }
+
+  Future<String> rejectPayment(String paymentId, String reason) async {
+    try {
+      final result = await supabase.rpc(
+        'reject_payment',
+        params: {'p_payment_id': paymentId, 'p_rejection_reason': reason},
+      );
+      return result as String;
+    } catch (e) {
+      print("Error rejecting payment: $e");
+      throw 'Gagal menolak pembayaran: $e';
+    }
+  }
 }

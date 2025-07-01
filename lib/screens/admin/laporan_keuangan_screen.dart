@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sipatka/main.dart'; // Untuk akses client supabase
-import 'package:sipatka/models/payment_model.dart';
 import 'package:sipatka/utils/app_theme.dart';
+import 'package:sipatka/utils/pdf_generator.dart'; // Import file baru kita
 
 class LaporanKeuanganScreen extends StatefulWidget {
   const LaporanKeuanganScreen({super.key});
@@ -13,46 +13,43 @@ class LaporanKeuanganScreen extends StatefulWidget {
 }
 
 class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
-  // Atur tanggal default untuk filter, misal awal bulan ini hingga hari ini
   DateTime _startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime _endDate = DateTime.now();
 
-  // Future untuk menampung daftar transaksi
-  Future<List<Payment>>? _reportFuture;
+  Future<Map<String, dynamic>>? _reportFuture;
+  Map<String, dynamic>? _lastReportData;
 
   @override
   void initState() {
     super.initState();
-    // Langsung panggil saat layar pertama kali dibuka
     _getReportData();
   }
 
-  // --- LOGIKA PENGAMBILAN DATA DIUBAH ---
   void _getReportData() {
-    // Ambil akhir hari untuk memastikan semua transaksi di tanggal akhir terhitung
-    final endOfDay = DateTime(
-      _endDate.year,
-      _endDate.month,
-      _endDate.day,
-      23,
-      59,
-      59,
-    );
     setState(() {
-      // Query langsung ke Supabase untuk mendapatkan transaksi lunas dalam rentang tanggal
-      // dan langsung digabungkan (JOIN) dengan data profil siswa
       _reportFuture = supabase
-          .from('payments')
-          .select(
-            '*, profiles!inner(student_name, parent_name)',
-          ) // Lakukan JOIN
-          .eq('status', 'paid')
-          .gte('paid_date', _startDate.toIso8601String())
-          .lte('paid_date', endOfDay.toIso8601String())
-          .order('paid_date', ascending: false) // Urutkan dari yang terbaru
-          .then(
-            (data) => data.map((item) => Payment.fromSupabase(item)).toList(),
-          );
+          .rpc(
+            'get_financial_report',
+            params: {
+              'p_start_date': _startDate.toIso8601String(),
+              'p_end_date': _endDate.toIso8601String(),
+            },
+          )
+          .then((response) {
+            final responseData = response as Map<String, dynamic>?;
+
+            // Jika respons dari server adalah null, kita lempar error
+            // yang akan ditangkap oleh FutureBuilder.
+            if (responseData == null) {
+              throw 'Tidak ada data yang dikembalikan dari server.';
+            }
+
+            // Simpan data ke _lastReportData
+            _lastReportData = responseData;
+
+            // Kembalikan data yang sudah pasti tidak null
+            return responseData;
+          });
     });
   }
 
@@ -71,7 +68,6 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
           _endDate = picked;
         }
       });
-      // Otomatis refresh data setelah tanggal diubah dan filter diterapkan
       _getReportData();
     }
   }
@@ -79,43 +75,56 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Laporan Keuangan')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildDateFilter(),
-            const SizedBox(height: 20),
-            Expanded(
-              child: FutureBuilder<List<Payment>>(
-                future: _reportFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        "Terjadi error: ${snapshot.error}\nPastikan Anda sudah membuat index di Supabase jika diminta.",
-                      ),
-                    );
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        "Tidak ada transaksi lunas pada rentang tanggal ini.",
-                      ),
-                    );
-                  }
-
-                  final transactions = snapshot.data!;
-                  // Hitung total pendapatan dari daftar transaksi yang didapat
-                  final double totalIncome = transactions.fold(
-                    0.0,
-                    (sum, item) => sum + item.amount,
+      appBar: AppBar(
+        title: const Text('Laporan Keuangan'),
+        actions: [
+          // Tombol Print/Export
+          IconButton(
+            icon: const Icon(Icons.print_outlined),
+            tooltip: "Print atau Export ke PDF",
+            onPressed:
+                (_lastReportData == null)
+                    ? null
+                    : () => PdfGenerator.generateAndPrintReport(
+                      startDate: _startDate,
+                      endDate: _endDate,
+                      reportData: _lastReportData!,
+                    ),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          _buildDateFilter(),
+          Expanded(
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: _reportFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text("Terjadi error: ${snapshot.error}"),
                   );
+                }
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return const Center(
+                    child: Text("Tidak ada data untuk periode ini."),
+                  );
+                }
 
-                  return Column(
+                final report = snapshot.data!;
+                final double totalIncome =
+                    (report['total_income'] as num?)?.toDouble() ?? 0.0;
+                final transactions =
+                    (report['transactions'] as List?)
+                        ?.cast<Map<String, dynamic>>() ??
+                    [];
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSummaryCard(
@@ -136,51 +145,47 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
                         ),
                       ),
                       const Divider(),
-                      Expanded(
-                        child: ListView.builder(
+                      if (transactions.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text("Tidak ada transaksi."),
+                          ),
+                        )
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
                           itemCount: transactions.length,
                           itemBuilder: (context, index) {
                             return _buildTransactionTile(transactions[index]);
                           },
                         ),
-                      ),
                     ],
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDateFilter() {
     return Card(
+      margin: const EdgeInsets.all(16).copyWith(bottom: 0),
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Column(
+        child: Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: _buildDatePickerField(
-                    "Dari Tanggal",
-                    _startDate,
-                    true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildDatePickerField(
-                    "Sampai Tanggal",
-                    _endDate,
-                    false,
-                  ),
-                ),
-              ],
+            Expanded(
+              child: _buildDatePickerField("Dari Tanggal", _startDate, true),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildDatePickerField("Sampai Tanggal", _endDate, false),
             ),
           ],
         ),
@@ -189,28 +194,25 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
   }
 
   Widget _buildDatePickerField(String label, DateTime date, bool isStart) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12)),
-        InkWell(
-          onTap: () => _selectDate(context, isStart),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 18),
-                const SizedBox(width: 8),
-                Text(DateFormat('dd MMM yyyy', 'id_ID').format(date)),
-              ],
-            ),
+    return InkWell(
+      onTap: () => _selectDate(context, isStart),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
           ),
         ),
-      ],
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today, size: 18),
+            const SizedBox(width: 8),
+            Text(DateFormat('dd MMM yy', 'id_ID').format(date)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -255,24 +257,28 @@ class _LaporanKeuanganScreenState extends State<LaporanKeuanganScreen> {
     );
   }
 
-  Widget _buildTransactionTile(Payment payment) {
+  Widget _buildTransactionTile(Map<String, dynamic> transaction) {
     final currencyFormat = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
     );
-    final studentName = payment.studentProfile?.studentName ?? 'Siswa Dihapus';
+    final paidDate = DateTime.parse(transaction['paid_date']);
+    final monthName = DateFormat(
+      'MMMM',
+      'id_ID',
+    ).format(DateTime(transaction['year'], transaction['month']));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: const Icon(Icons.receipt_long, color: AppTheme.primaryColor),
-        title: Text(studentName),
+        title: Text(transaction['student_name'] ?? 'Siswa Dihapus'),
         subtitle: Text(
-          "Pembayaran: ${payment.month} ${payment.year}\nDibayar pada: ${DateFormat('dd MMM yyyy').format(payment.paidDate!)}",
+          "Tagihan: $monthName ${transaction['year']}\nDibayar pada: ${DateFormat('dd MMM yyyy').format(paidDate)}",
         ),
         isThreeLine: true,
         trailing: Text(
-          currencyFormat.format(payment.amount),
+          currencyFormat.format(transaction['amount']),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),

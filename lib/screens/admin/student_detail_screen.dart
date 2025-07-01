@@ -397,14 +397,17 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 onPressed: () async {
                   try {
-                    // --- PANGGIL EDGE FUNCTION BARU ---
                     await supabase.functions.invoke(
                       'delete-user-account',
                       body: {'uid': parentId},
                     );
                     if (mounted) {
+                      // Tutup dialog konfirmasi
                       Navigator.pop(context);
-                      Navigator.pop(context);
+
+                      // Kembali ke halaman daftar DAN kirim sinyal 'true'
+                      Navigator.pop(context, true);
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text("Akun siswa berhasil dihapus."),

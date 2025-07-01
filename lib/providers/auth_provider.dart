@@ -57,17 +57,29 @@ class AuthProvider with ChangeNotifier {
   Future<void> _fetchProfile() async {
     try {
       final userId = supabase.auth.currentUser!.id;
-      final data =
-          await supabase.from('profiles').select().eq('id', userId).single();
+      // --- PANGGIL FUNGSI RPC BARU ---
+      final data = await supabase.rpc(
+        'get_user_details',
+        params: {'p_user_id': userId},
+      );
 
-      // Tambahan pengecekan untuk memastikan data tidak kosong
-      if (data.isNotEmpty) {
-        _userModel = UserModel.fromSupabase(data);
+      if (data != null) {
+        // Buat UserModel dari data JSON yang dikembalikan RPC
+        final studentData = data['student'] as Map<String, dynamic>?;
+        _userModel = UserModel(
+          uid: data['id'] ?? '',
+          email: data['email'] ?? '',
+          parentName: data['parent_name'] ?? '',
+          role: data['role'] ?? 'user',
+          saldo: (data['saldo'] as num?)?.toDouble() ?? 0.0,
+          studentName: studentData?['student_name'] ?? '',
+          className: studentData?['class_name'] ?? '',
+        );
       } else {
         _userModel = null;
       }
     } catch (e) {
-      print("Error fetching profile: $e");
+      print("Error fetching profile with RPC: $e");
       _userModel = null;
     }
     notifyListeners();

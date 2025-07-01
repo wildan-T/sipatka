@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:sipatka/providers/auth_provider.dart';
 import 'package:sipatka/utils/app_theme.dart';
@@ -13,7 +14,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuthAndNavigate();
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndNavigate();
+    });
   }
 
   Future<void> _checkAuthAndNavigate() async {
@@ -22,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Looping untuk menunggu hingga isLoading menjadi false
     while (authProvider.isLoading) {
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(seconds: 2));
     }
 
     if (!mounted) return;
