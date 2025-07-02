@@ -148,19 +148,39 @@ class SchoolInfoScreen extends StatelessWidget {
   }
 
   void _openMaps() async {
-    // Ganti dengan koordinat atau query pencarian yang lebih spesifik
-    const query = "TK An-Naafi'Nur Perumahan Garden City";
-    final url =
-        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
+    // Alamat atau nama tempat yang ingin dicari
+    const String query = "TK An-Naafi'Nur Perumahan Garden City";
+
+    // Format URL yang benar untuk Google Maps
+    final Uri googleMapsUrl = Uri.parse(
+      "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}",
+    );
+
+    try {
+      if (await canLaunchUrl(googleMapsUrl)) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // Beri pesan jika tidak bisa membuka maps
+        print('Tidak dapat membuka Google Maps.');
+      }
+    } catch (e) {
+      print('Error saat membuka peta: $e');
     }
   }
 
   void _callSchool() async {
-    const url = 'tel:+6281234567890';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
+    // Nomor telepon tujuan
+    final Uri phoneLaunchUri = Uri(scheme: 'tel', path: '+6281234567890');
+
+    try {
+      if (await canLaunchUrl(phoneLaunchUri)) {
+        await launchUrl(phoneLaunchUri);
+      } else {
+        // Beri pesan jika tidak bisa melakukan panggilan
+        print('Tidak dapat melakukan panggilan.');
+      }
+    } catch (e) {
+      print('Error saat melakukan panggilan: $e');
     }
   }
 }

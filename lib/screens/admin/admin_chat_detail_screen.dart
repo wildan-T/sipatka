@@ -6,6 +6,7 @@ import 'package:sipatka/main.dart';
 import 'package:sipatka/models/user_model.dart';
 import 'package:sipatka/providers/auth_provider.dart';
 import 'package:sipatka/utils/app_theme.dart';
+import 'package:sipatka/utils/error_dialog.dart';
 
 class AdminChatDetailScreen extends StatefulWidget {
   final UserModel parent;
@@ -65,11 +66,11 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Gagal mengirim pesan: $e"),
-            backgroundColor: Colors.red,
-          ),
+        showErrorDialog(
+          context: context,
+          title: 'Pengiriman Gagal',
+          message:
+              'Pesan Anda tidak dapat terkirim. Periksa koneksi internet Anda.',
         );
       }
     }

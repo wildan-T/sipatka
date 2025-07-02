@@ -48,11 +48,11 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
-  Future<String> rejectPayment(String paymentId, String reason) async {
+  Future<String> rejectPayment(String paymentId) async {
     try {
       final result = await supabase.rpc(
         'reject_payment',
-        params: {'p_payment_id': paymentId, 'p_rejection_reason': reason},
+        params: {'p_payment_id': paymentId},
       );
       return result as String;
     } catch (e) {

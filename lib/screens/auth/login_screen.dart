@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sipatka/providers/auth_provider.dart';
 import 'package:sipatka/utils/app_theme.dart';
-// import 'forgot_password_screen.dart'; 
+import 'package:sipatka/utils/error_dialog.dart';
+// import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isLoading = true);
     final authProvider = context.read<AuthProvider>();
     await authProvider.login(
@@ -44,8 +45,12 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacementNamed(context, '/dashboard');
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.errorMessage ?? 'Login Gagal. Terjadi kesalahan.'), backgroundColor: Colors.red),
+      showErrorDialog(
+        context: context,
+        title: 'Login Gagal',
+        message:
+            authProvider.errorMessage ??
+            'Silakan periksa kembali email dan password Anda, atau hubungi admin.',
       );
     }
   }
@@ -62,14 +67,29 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.school, size: 80, color: AppTheme.primaryColor),
+                  const Icon(
+                    Icons.school,
+                    size: 80,
+                    color: AppTheme.primaryColor,
+                  ),
                   const SizedBox(height: 20),
-                  const Text('Selamat Datang di SIPATKA', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Selamat Datang di SIPATKA',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 40),
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder(), prefixIcon: Icon(Icons.email)),
-                    validator: (v) => (v == null || !v.contains('@')) ? 'Email tidak valid' : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    validator:
+                        (v) =>
+                            (v == null || !v.contains('@'))
+                                ? 'Email tidak valid'
+                                : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -80,11 +100,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      )
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed:
+                            () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                      ),
                     ),
-                    validator: (v) => (v == null || v.length < 6) ? 'Password minimal 6 karakter' : null,
+                    validator:
+                        (v) =>
+                            (v == null || v.length < 6)
+                                ? 'Password minimal 6 karakter'
+                                : null,
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
@@ -92,9 +123,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _login,
-                      child: _isLoading 
-                        ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
-                        : const Text('Masuk'),
+                      child:
+                          _isLoading
+                              ? const CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              )
+                              : const Text('Masuk'),
                     ),
                   ),
                   // TextButton(onPressed: () { /* Navigasi ke Lupa Password */ }, child: Text('Lupa Password?'))

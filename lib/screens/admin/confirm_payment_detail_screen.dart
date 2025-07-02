@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:sipatka/models/payment_model.dart';
 import 'package:sipatka/providers/admin_provider.dart';
 import 'package:sipatka/utils/app_theme.dart';
+import 'package:sipatka/utils/error_dialog.dart';
 
 class ConfirmPaymentDetailScreen extends StatefulWidget {
   final Payment payment;
@@ -49,8 +50,11 @@ class _ConfirmPaymentDetailScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        showErrorDialog(
+          context: context,
+          title: 'Konfirmasi Gagal',
+          message:
+              'Terjadi kesalahan saat mencoba mengonfirmasi pembayaran.\n\nDetail: $e',
         );
       }
     }
@@ -58,21 +62,11 @@ class _ConfirmPaymentDetailScreenState
   }
 
   Future<void> _onReject() async {
-    if (_rejectionReasonController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Alasan penolakan wajib diisi."),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
     setState(() => _isProcessing = true);
     try {
       final message = await context.read<AdminProvider>().rejectPayment(
         widget.payment.id,
-        _rejectionReasonController.text.trim(),
-      );
+      ); // Panggil tanpa alasan
       if (mounted) {
         Navigator.pop(context, true); // Kirim sinyal sukses untuk refresh
         ScaffoldMessenger.of(context).showSnackBar(
@@ -81,8 +75,11 @@ class _ConfirmPaymentDetailScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        showErrorDialog(
+          context: context,
+          title: 'Penolakan Gagal',
+          message:
+              'Terjadi kesalahan saat mencoba menolak pembayaran.\n\nDetail: $e',
         );
       }
     }
@@ -168,18 +165,7 @@ class _ConfirmPaymentDetailScreenState
             else
               const Text('Tidak ada bukti pembayaran.'),
 
-            const SizedBox(height: 24),
-
-            // --- INPUT ALASAN PENOLAKAN ---
-            TextField(
-              controller: _rejectionReasonController,
-              decoration: const InputDecoration(
-                labelText: 'Alasan Penolakan (wajib jika ditolak)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.comment_outlined),
-              ),
-              maxLines: 3,
-            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -245,6 +231,7 @@ class _ConfirmPaymentDetailScreenState
                         onPressed: _onConfirm,
                       ),
                     ),
+                    const SizedBox(height: 16),
                   ],
                 ),
       ),

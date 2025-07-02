@@ -6,6 +6,7 @@ import 'package:sipatka/main.dart'; // Untuk akses client supabase
 import 'package:sipatka/models/payment_model.dart';
 import 'package:sipatka/models/user_model.dart'; // Kita tetap gunakan untuk dialog
 import 'package:sipatka/utils/app_theme.dart';
+import 'package:sipatka/utils/error_dialog.dart';
 
 class StudentDetailScreen extends StatefulWidget {
   // Sekarang kita hanya perlu studentId untuk mengambil semua data
@@ -360,11 +361,12 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Gagal mengupdate data: $e"),
-                            backgroundColor: Colors.red,
-                          ),
+                        Navigator.pop(context); // Tutup dialog loading
+                        showErrorDialog(
+                          context: context,
+                          title: 'Update Gagal',
+                          message:
+                              'Tidak dapat menyimpan perubahan. Silakan coba lagi nanti.\n\nDetail: $e',
                         );
                       }
                     }
@@ -417,12 +419,12 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                     }
                   } catch (e) {
                     if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("Gagal menghapus akun: $e"),
-                          backgroundColor: Colors.red,
-                        ),
+                      Navigator.pop(context); // Tutup dialog loading
+                      showErrorDialog(
+                        context: context,
+                        title: 'Hapus Akun Gagal',
+                        message:
+                            'Tidak dapat menghapus akun saat ini. Pastikan koneksi internet stabil.\n\nDetail: $e',
                       );
                     }
                   }

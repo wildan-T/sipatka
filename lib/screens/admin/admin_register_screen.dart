@@ -1,6 +1,7 @@
 // lib/screens/admin/admin_register_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:sipatka/utils/error_dialog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sipatka/main.dart'; // Untuk akses client supabase
 
@@ -198,8 +199,10 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
         errorMessage = e.toString();
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+      showErrorDialog(
+        context: context,
+        title: 'Registrasi Gagal',
+        message: errorMessage,
       );
     }
 
