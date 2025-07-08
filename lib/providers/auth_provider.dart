@@ -151,18 +151,19 @@ class AuthProvider with ChangeNotifier {
     await supabase.auth.signOut();
   }
 
-  // --- FUNGSI BARU: RESET PASSWORD UNTUK SUPABASE ---
   Future<void> resetPassword({required String email}) async {
     _isLoading = true;
-    _errorMessage = null;
+    _errorMessage = null; // Bersihkan pesan error lama
     notifyListeners();
+
     try {
       // Panggil fungsi bawaan Supabase untuk reset password
       await supabase.auth.resetPasswordForEmail(email);
     } on AuthException catch (e) {
       _errorMessage = e.message;
     } catch (e) {
-      _errorMessage = 'Terjadi kesalahan tidak terduga.';
+      _errorMessage =
+          'Terjadi kesalahan tidak terduga saat mengirim email reset.';
     } finally {
       _isLoading = false;
       notifyListeners();

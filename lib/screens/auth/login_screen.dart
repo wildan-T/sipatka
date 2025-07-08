@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sipatka/providers/auth_provider.dart';
+import 'package:sipatka/screens/auth/forgot_password_screen.dart';
 import 'package:sipatka/utils/app_theme.dart';
 import 'package:sipatka/utils/error_dialog.dart';
-// import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -132,7 +132,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               : const Text('Masuk'),
                     ),
                   ),
-                  // TextButton(onPressed: () { /* Navigasi ke Lupa Password */ }, child: Text('Lupa Password?'))
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Lupa Password?'),
+                  ),
                 ],
               ),
             ),
