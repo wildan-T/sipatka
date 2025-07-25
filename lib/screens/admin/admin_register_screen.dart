@@ -192,11 +192,12 @@ class _AdminRegisterScreenState extends State<AdminRegisterScreen> {
       if (!mounted) return;
       String errorMessage = 'Terjadi kesalahan tidak diketahui.';
       if (e is FunctionException) {
-        // Tangkap error spesifik dari Edge Function
-        final details = e.details as Map<String, dynamic>?;
-        errorMessage = 'Error dari Server: ${details?['error'] ?? e.message}';
-      } else {
-        errorMessage = e.toString();
+        if (e.details is Map<String, dynamic>) {
+          final details = e.details as Map<String, dynamic>;
+          errorMessage = 'Error dari Server: ${details['error']}';
+        } else {
+          errorMessage = 'Error dari Server: ${e.details.toString()}';
+        }
       }
 
       showErrorDialog(

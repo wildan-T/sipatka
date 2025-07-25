@@ -67,10 +67,10 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.school,
-                    size: 80,
-                    color: AppTheme.primaryColor,
+                  Image.asset(
+                    "assets/logo-nobg.png",
+                    width: 80,
+                    fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 20),
                   const Text(

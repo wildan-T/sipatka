@@ -44,15 +44,16 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppTheme.primaryColor,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.school, size: 80, color: Colors.white),
-            SizedBox(height: 20),
-            Text(
+            Image.asset("assets/logo-nobg.png", width: 80, fit: BoxFit.contain),
+            // const Icon(Icons.school, size: 80, color: Colors.white),
+            const SizedBox(height: 20),
+            const Text(
               'SIPATKA',
               style: TextStyle(
                 color: Colors.white,
@@ -60,8 +61,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 20),
-            CircularProgressIndicator(color: Colors.white),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(color: Colors.white),
           ],
         ),
       ),
