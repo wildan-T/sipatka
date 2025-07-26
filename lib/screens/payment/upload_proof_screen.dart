@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:sipatka/utils/app_theme.dart';
-import 'package:sipatka/utils/error_dialog.dart';
 import '../../providers/payment_provider.dart';
 import '../../models/payment_model.dart';
 
@@ -33,37 +32,29 @@ class _PaymentDialogState extends State<PaymentDialog> {
   String? _selectedMethod;
   final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
 
-  // Definisikan metode pembayaran Anda di sini
   final Map<String, Map<String, String>> paymentDetails = {
-    'Transfer Bank (BJB)': {
-      'bank': 'BJB',
-      'rekening': '0113532750100',
-      'nama': 'TK ANNAAFI\'NUR',
+    'Transfer Bank (BCA)': {
+      'bank': 'BCA',
+      'rekening': '7295237082',
+      'nama': 'YAYASAN AN-NAAFI\'NUR',
     },
-    // Jika Anda ingin menambah metode lain, cukup tambahkan di sini.
-    // 'E-Wallet (OVO/GoPay/DANA)': {
-    //   'bank': 'OVO/GoPay/DANA',
-    //   'rekening': '081290589185',
-    //   'nama': 'TK AN-NAAFI\'NUR'
-    // },
+    'Transfer Bank (Mandiri)': {
+      'bank': 'Bank Mandiri',
+      'rekening': '1760005209604',
+      'nama': 'YAYASAN AN-NAAFI\'NUR',
+    },
+    'E-Wallet (OVO/GoPay/DANA)': {
+      'bank': 'OVO/GoPay/DANA',
+      'rekening': '081290589185',
+      'nama': 'TK AN-NAAFI\'NUR',
+    },
   };
-
-  // --- AWAL PERBAIKAN ---
-  @override
-  void initState() {
-    super.initState();
-    // Jika hanya ada satu metode pembayaran, langsung pilih metode tersebut.
-    if (paymentDetails.length == 1) {
-      _selectedMethod = paymentDetails.keys.first;
-    }
-  }
-  // --- AKHIR PERBAIKAN ---
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 70,
-    );
+    ); // Menambahkan kompresi gambar
     if (pickedFile != null) {
       setState(() => _imageFile = File(pickedFile.path));
     }
@@ -71,18 +62,20 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   Future<void> _submitPayment() async {
     if (_selectedMethod == null) {
-      showErrorDialog(
-        context: context,
-        title: 'Validasi Gagal',
-        message: 'Pilih metode pembayaran terlebih dahulu.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih metode pembayaran terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
     if (_imageFile == null) {
-      showErrorDialog(
-        context: context,
-        title: 'Validasi Gagal',
-        message: 'Unggah bukti pembayaran terlebih dahulu.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unggah bukti pembayaran terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -111,11 +104,13 @@ class _PaymentDialogState extends State<PaymentDialog> {
         ),
       );
     } else {
-      showErrorDialog(
-        context: context,
-        title: 'Unggah Gagal',
-        message:
-            'Tidak dapat mengirim bukti pembayaran. Periksa koneksi internet Anda dan coba lagi.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Gagal mengunggah bukti pembayaran. Silakan coba lagi.',
+          ),
+          backgroundColor: Colors.red,
+        ),
       );
     }
     setState(() => _isUploading = false);
@@ -125,6 +120,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Konfirmasi Pembayaran'),
+      // --- KONTEN DI-UPDATE AGAR LEBIH RAPI ---
       content:
           _isUploading
               ? const SizedBox(
@@ -148,6 +144,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
                       style: TextStyle(color: AppTheme.textSecondary),
                     ),
                     const SizedBox(height: 4),
+                    // Tampilkan daftar bulan yang akan dibayar
                     ...widget.selectedPayments.map(
                       (p) => Text(
                         '- ${p.month} ${p.year}',
@@ -156,32 +153,29 @@ class _PaymentDialogState extends State<PaymentDialog> {
                     ),
                     const Divider(height: 24),
 
-                    // --- AWAL PERBAIKAN ---
-                    // Tampilkan dropdown HANYA jika ada lebih dari satu metode pembayaran.
-                    if (paymentDetails.length > 1) ...[
-                      DropdownButtonFormField<String>(
-                        value: _selectedMethod,
-                        hint: const Text('Pilih metode pembayaran'),
-                        isExpanded: true,
-                        items:
-                            paymentDetails.keys
-                                .map(
-                                  (method) => DropdownMenuItem(
-                                    value: method,
-                                    child: Text(method),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged:
-                            (value) => setState(() => _selectedMethod = value),
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                        ),
+                    // Dropdown metode pembayaran
+                    DropdownButtonFormField<String>(
+                      value: _selectedMethod,
+                      hint: const Text('Pilih metode pembayaran'),
+                      isExpanded: true,
+                      items:
+                          paymentDetails.keys
+                              .map(
+                                (method) => DropdownMenuItem(
+                                  value: method,
+                                  child: Text(method),
+                                ),
+                              )
+                              .toList(),
+                      onChanged:
+                          (value) => setState(() => _selectedMethod = value),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 16),
-                    ],
+                    ),
+                    const SizedBox(height: 16),
 
-                    // --- AKHIR PERBAIKAN ---
+                    // Detail rekening (muncul setelah metode dipilih)
                     if (paymentDetails[_selectedMethod] != null)
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -205,11 +199,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            if (paymentDetails.length == 1)
-                              Text(
-                                'Ke rekening ${paymentDetails[_selectedMethod]!['bank']}:',
-                                style: const TextStyle(fontSize: 12),
-                              ),
+                            Text(
+                              'Ke rekening ${paymentDetails[_selectedMethod]!['bank']}:',
+                              style: const TextStyle(fontSize: 12),
+                            ),
                             Text(
                               '${paymentDetails[_selectedMethod]!['rekening']} a/n ${paymentDetails[_selectedMethod]!['nama']}',
                               style: const TextStyle(
@@ -223,6 +216,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
                     const SizedBox(height: 24),
 
+                    // Tombol dan preview unggah bukti
                     const Text(
                       'Unggah Bukti Pembayaran:',
                       style: TextStyle(fontWeight: FontWeight.bold),
@@ -231,8 +225,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
                     GestureDetector(
                       onTap: _pickImage,
                       child: Stack(
+                        // Gunakan Stack untuk menumpuk widget
                         alignment: Alignment.center,
                         children: [
+                          // Widget 1: Latar belakang (Container dengan gambar atau ikon)
                           Container(
                             height: 150,
                             width: double.infinity,
@@ -271,15 +267,18 @@ class _PaymentDialogState extends State<PaymentDialog> {
                                       ),
                                     ),
                           ),
+
+                          // Widget 2: Tombol "Lihat Lebih Besar" (hanya muncul jika gambar ada)
                           if (_imageFile != null)
                             Positioned(
+                              // Gunakan Positioned untuk menempatkan tombol di pojok
                               bottom: 8,
                               right: 8,
                               child: OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
                                   backgroundColor: Colors.black.withOpacity(
                                     0.5,
-                                  ),
+                                  ), // Latar belakang agar terbaca
                                   side: const BorderSide(color: Colors.white),
                                 ),
                                 icon: const Icon(
@@ -295,6 +294,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
                                   ),
                                 ),
                                 onPressed: () {
+                                  // Dialog untuk menampilkan gambar secara penuh
                                   showDialog(
                                     context: context,
                                     builder:
@@ -303,6 +303,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
                                             alignment: Alignment.topRight,
                                             children: [
                                               InteractiveViewer(
+                                                // Widget agar bisa di-zoom
                                                 child: Image.file(_imageFile!),
                                               ),
                                               IconButton(

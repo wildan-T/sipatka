@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sipatka/screens/profile/change_password_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sipatka/providers/admin_provider.dart';
 import 'package:sipatka/providers/auth_provider.dart';
@@ -14,7 +13,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final supabase = Supabase.instance.client;
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,14 +27,6 @@ Future<void> main() async {
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
-
-  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-    if (data.event == AuthChangeEvent.passwordRecovery) {
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
-      );
-    }
-  });
 
   runApp(const MyApp());
 }

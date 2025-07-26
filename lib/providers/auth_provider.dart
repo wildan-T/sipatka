@@ -169,24 +169,4 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // --- FUNGSI UNTUK UBAH PASSWORD ---
-  Future<bool> changePassword(String newPassword) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      await supabase.auth.updateUser(UserAttributes(password: newPassword));
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } on AuthException catch (e) {
-      _errorMessage = e.message;
-    } catch (e) {
-      _errorMessage = 'Terjadi kesalahan tidak terduga saat mengubah password.';
-    }
-    _isLoading = false;
-    notifyListeners();
-    return false;
-  }
 }

@@ -51,7 +51,7 @@ class SchoolInfoScreen extends StatelessWidget {
             _buildInfoRow(
               Icons.location_on,
               'Alamat',
-              'Perum Orchid Park Blok D-1 No 1 Gebang Raya, Kec. Periuk, Kota Tangerang',
+              'Perumahan Garden City (Lokasi detail menyusul)',
             ),
             _buildInfoRow(Icons.person, 'Kepala Sekolah', 'EVIE SULIYANTI'),
             _buildInfoRow(
@@ -59,8 +59,8 @@ class SchoolInfoScreen extends StatelessWidget {
               'Operator',
               'Virda Asmarani Alexandra',
             ),
-            _buildInfoRow(Icons.phone, 'Telepon', '+62 878-8134-3541'),
-            _buildInfoRow(Icons.email, 'Email', 'tk.annaafinur98@gmail.com'),
+            _buildInfoRow(Icons.phone, 'Telepon', '+6281234567890'),
+            _buildInfoRow(Icons.email, 'Email', 'info@tkannaafinur.sch.id'),
           ]),
           const SizedBox(height: 16),
 
@@ -70,16 +70,8 @@ class SchoolInfoScreen extends StatelessWidget {
             _buildInfoRow(Icons.business, 'Status', 'Swasta'),
             _buildInfoRow(Icons.account_balance, 'Kepemilikan', 'Yayasan'),
             _buildInfoRow(Icons.book, 'Kurikulum', 'Kurikulum Merdeka'),
-            _buildInfoRow(
-              Icons.calendar_today,
-              'SK Pendirian',
-              ' AHU-1029.AH.01.04.Tahun 2012',
-            ),
-            _buildInfoRow(
-              Icons.verified,
-              'SK Operasional',
-              '421.1/Kep.06-TK/BPPMPT/20',
-            ),
+            _buildInfoRow(Icons.calendar_today, 'SK Pendirian', '2012-03-08'),
+            _buildInfoRow(Icons.verified, 'SK Operasional', '2012-11-19'),
           ]),
           const SizedBox(height: 24),
 
@@ -157,7 +149,7 @@ class SchoolInfoScreen extends StatelessWidget {
 
   void _openMaps() async {
     // Alamat atau nama tempat yang ingin dicari
-    const String query = "TK An-Naafi'Nur Perum Orchid Park Blok D-1 No 1";
+    const String query = "TK An-Naafi'Nur Perumahan Garden City";
 
     // Format URL yang benar untuk Google Maps
     final Uri googleMapsUrl = Uri.parse(
